@@ -5,6 +5,18 @@ import { Application } from '@/lib/definitions';
 
 export const dynamic = 'force-dynamic';
 
+// CORS başlıkları
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, { headers: corsHeaders });
+}
+
+
 export async function GET() {
   try {
     const { firestore } = initializeFirebase();
@@ -20,13 +32,13 @@ export async function GET() {
       apps.push(appWithoutPassword);
     });
 
-    return NextResponse.json(apps);
+    return NextResponse.json(apps, { headers: corsHeaders });
   } catch (error) {
     console.error('Error fetching applications:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new NextResponse(
         JSON.stringify({ message: 'Error fetching applications', error: errorMessage }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 }

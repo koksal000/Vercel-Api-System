@@ -5,6 +5,17 @@ import { Application } from '@/lib/definitions';
 
 export const dynamic = 'force-dynamic';
 
+// CORS başlıkları
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, { headers: corsHeaders });
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { appId: string } }
@@ -16,7 +27,7 @@ export async function GET(
     if (!appId) {
       return new NextResponse(
         JSON.stringify({ message: 'Application ID is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -26,7 +37,7 @@ export async function GET(
     if (!appSnap.exists()) {
       return new NextResponse(
         JSON.stringify({ message: 'Application not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -38,14 +49,14 @@ export async function GET(
       htmlContent: appData.htmlContent,
     };
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, { headers: corsHeaders });
 
   } catch (error) {
     console.error(`Error fetching application ${params.appId}:`, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new NextResponse(
         JSON.stringify({ message: 'Error fetching application', error: errorMessage }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 }
