@@ -1,0 +1,166 @@
+{
+  "entities": {
+    "Application": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Application",
+      "type": "object",
+      "description": "Represents an application stored in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the application entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the application."
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the application."
+        },
+        "htmlContent": {
+          "type": "string",
+          "description": "The HTML content of the application."
+        },
+        "password": {
+          "type": "string",
+          "description": "The password required to update the application. This is NOT an authentication password."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the application was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "The date and time when the application was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version",
+        "htmlContent",
+        "password",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedApplication": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SavedApplication",
+      "type": "object",
+      "description": "Represents a user's saved application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the saved application entry."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N SavedApplication)"
+        },
+        "applicationId": {
+          "type": "string",
+          "description": "Reference to Application. (Relationship: Application 1:N SavedApplication)"
+        },
+        "savedAt": {
+          "type": "string",
+          "description": "The date and time when the application was saved.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "applicationId",
+        "savedAt"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the CapUpdate Manager application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/applications/{applicationId}",
+        "definition": {
+          "entityName": "Application",
+          "schema": {
+            "$ref": "#/backend/entities/Application"
+          },
+          "description": "Stores application data. Includes 'id', 'name', 'version', 'htmlContent', 'password', 'createdAt', and 'updatedAt'.",
+          "params": [
+            {
+              "name": "applicationId",
+              "description": "Unique identifier for the application."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/saved_applications/{savedApplicationId}",
+        "definition": {
+          "entityName": "SavedApplication",
+          "schema": {
+            "$ref": "#/backend/entities/SavedApplication"
+          },
+          "description": "Stores user's saved applications.  Path-based ownership ensures only the user can access their saved applications.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            },
+            {
+              "name": "savedApplicationId",
+              "description": "Unique identifier for the saved application."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed to support the CapUpdate Manager application's requirements, focusing on security, scalability, and ease of maintenance.  The structure incorporates denormalization for authorization independence and segregates data based on access patterns. The design implements path-based ownership for user-specific data and uses dedicated collections for global data.\n\nApplications are stored in the `/applications` collection. No user data is stored in this collection to avoid Authorization Independence issues.\n\nUser-specific saved applications are stored under `/users/{userId}/saved_applications`. This path-based ownership simplifies security rules, ensuring only the user can access their saved applications.\n\n**Authorization Independence:** Authorization is achieved by using path-based rules to control access to saved applications and not relying on `get()` calls.\n\n**QAPs:** Segregation and the path-based ownership model supports secure list operations (QAPs).  Listing applications for all users is done using a collection group query, and listing saved applications is restricted to the individual user based on the path `/users/{userId}/saved_applications`."
+  }
+}

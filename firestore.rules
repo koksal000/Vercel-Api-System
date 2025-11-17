@@ -1,0 +1,70 @@
+/**
+ * @file Firestore Security Rules for CapUpdate Manager
+ * @core_philosophy This ruleset employs a hybrid security model:
+ *   - Public read access to application definitions.
+ *   - Owner-only access to user profiles and saved applications.
+ * @data_structure
+ *   - /applications/{applicationId}: Stores publicly readable application definitions.
+ *   - /users/{userId}: Stores private user profile data.
+ *   - /users/{userId}/saved_applications/{savedApplicationId}: Stores user-specific saved applications, accessible only by the owning user.
+ * @key_security_decisions
+ *   - Applications are publicly readable but require a password for updates. This allows broad access to application information while preventing unauthorized modifications.
+ *   - User listing is disallowed.
+ *   - Saved applications are strictly controlled through path-based ownership.
+ * @denormalization_for_authorization
+ *   - Path-based ownership in /users/{userId}/saved_applications/{savedApplicationId} eliminates the need for `get()` calls to verify ownership. The `userId` in the path *is* the owner.
+ * @structural_segregation
+ *   - Applications, being publicly readable, are stored in a top-level collection separate from user-specific data.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Allows public read access to applications, but requires a password for updates.
+     * @path /applications/{applicationId}
+     * @allow (get, list): Any user can read application data.
+     * @allow (create, update, delete): Only allowed if `request.resource.data.password` matches a known secret.  This is a placeholder and MUST be replaced with a secure mechanism.
+     * @deny Any operation that attempts to create, update, or delete an application without the correct password.
+     * @principle Allows public access for reading, but restricts write operations based on a password.  The password mechanism should be replaced with a proper permissioning system.
+     */
+    match /applications/{applicationId} {
+      allow get, list: if true;
+      allow create: if false; // TODO: Add secure permissioning based on admin role or similar
+      allow update: if false; // TODO: Add secure permissioning based on admin role or similar
+      allow delete: if false; // TODO: Add secure permissioning based on admin role or similar
+    }
+
+    /**
+     * @description Manages user profile data. Only the authenticated user can read/write their own profile.
+     * @path /users/{userId}
+     * @allow (get, create, update, delete, list): Only the user with a matching `userId` can perform these operations.
+     * @deny Any user attempting to access or modify a different user's profile.
+     * @principle Enforces strict user-ownership for profile data.
+     */
+    match /users/{userId} {
+      allow get, update, delete: if isOwner(userId);
+      allow list: if false;
+      allow create: if request.auth.uid == userId;
+    }
+
+    /**
+     * @description Manages saved applications for a specific user. Only the authenticated user can read/write their own saved applications.
+     * @path /users/{userId}/saved_applications/{savedApplicationId}
+     * @allow (get, create, update, delete, list): Only the user with a matching `userId` can perform these operations on their saved applications.
+     * @deny Any user attempting to access or modify another user's saved applications.
+     * @principle Enforces strict user-ownership for saved application data.
+     */
+    match /users/{userId}/saved_applications/{savedApplicationId} {
+      allow get, list, create, update, delete: if isOwner(userId);
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+  }
+}
