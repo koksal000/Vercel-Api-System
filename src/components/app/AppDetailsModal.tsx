@@ -27,7 +27,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Eye, Edit, Key, Loader2, ArrowLeft } from 'lucide-react';
+import { Eye, Edit, Key, Loader2, ArrowLeft, Link as LinkIcon, Copy } from 'lucide-react';
 import { HtmlPreview } from './HtmlPreview';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
@@ -71,7 +71,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
         authPassword: '',
       });
     }
-  }, [isOpen, app.id, app.name, app.version, app.htmlContent]);
+  }, [isOpen, app.id]);
 
 
   const onUpdateSubmit = (values: UpdateFormValues) => {
@@ -112,8 +112,14 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
         });
     }, 300);
   }
+  
+  const copyToClipboard = (textToCopy: string, type: string) => {
+    navigator.clipboard.writeText(textToCopy);
+    toast({ title: 'Copied!', description: `${type} copied to clipboard.` });
+  }
 
   const renderContent = () => {
+    const apiUrl = `/api/apps/${app.id}`;
     switch(view) {
       case 'update':
         return (
@@ -151,9 +157,23 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
               <DialogDescription>Version {app.version}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 text-sm">
-                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                    <Label className="text-right text-muted-foreground">App ID</Label>
-                    <Input readOnly value={app.id} className="font-code" />
+                <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+                    <Label className="text-right text-muted-foreground pt-2">App ID</Label>
+                    <div className="flex items-center gap-2">
+                      <Input readOnly value={app.id} className="font-code" />
+                       <Button variant="outline" size="icon" onClick={() => copyToClipboard(app.id, 'App ID')}>
+                          <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                </div>
+                 <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+                    <Label className="text-right text-muted-foreground pt-2">API URL</Label>
+                    <div className="flex items-center gap-2">
+                      <Input readOnly value={apiUrl} className="font-code" />
+                       <Button variant="outline" size="icon" onClick={() => copyToClipboard(apiUrl, 'API URL')}>
+                          <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
                 </div>
                 <div className="grid grid-cols-[120px_1fr] items-center gap-4">
                     <Label className="text-right text-muted-foreground">Created</Label>
