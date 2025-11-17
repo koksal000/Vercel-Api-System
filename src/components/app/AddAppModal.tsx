@@ -68,7 +68,7 @@ export function AddAppModal() {
       return;
     }
 
-    startTransition(async () => {
+    startTransition(() => {
         const appId = generateId(10);
         const appRef = doc(firestore, 'applications', appId);
         const appData = {

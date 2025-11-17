@@ -30,8 +30,8 @@ service cloud.firestore {
      */
     match /applications/{applicationId} {
       allow get, list: if true;
-      allow create: if false; // TODO: Add secure permissioning based on admin role or similar
-      allow update: if false; // TODO: Add secure permissioning based on admin role or similar
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.resource.data.password == resource.data.password;
       allow delete: if false; // TODO: Add secure permissioning based on admin role or similar
     }
 

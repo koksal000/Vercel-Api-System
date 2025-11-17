@@ -78,27 +78,14 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
     }
     startTransition(async () => {
       const appRef = doc(firestore, 'applications', values.id);
-      const appSnap = await getDoc(appRef);
-
-      if (!appSnap.exists()) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: 'Application not found.' });
-        return;
-      }
-
-      const appData = appSnap.data();
-
-      if (appData.password !== values.authPassword) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: 'Incorrect password.' });
-        form.setError('authPassword', { message: 'The password you entered is incorrect.' });
-        return;
-      }
       
-      const { id, name, version, htmlContent } = values;
+      const { id, name, version, htmlContent, authPassword } = values;
 
       updateDocumentNonBlocking(appRef, {
         name,
         version,
         htmlContent,
+        password: authPassword,
         updatedAt: serverTimestamp(),
       });
       
