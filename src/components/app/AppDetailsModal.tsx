@@ -119,7 +119,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
   }
 
   const renderContent = () => {
-    const apiUrl = `/api/apps/${app.id}`;
+    const apiUrl = `https://vercel-api-system.vercel.app/api/apps/${app.id}`;
     switch(view) {
       case 'update':
         return (

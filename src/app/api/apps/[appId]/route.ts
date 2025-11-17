@@ -31,10 +31,14 @@ export async function GET(
     }
 
     const appData = appSnap.data() as Application;
-    // Güvenlik için parolayı yanıttan çıkar
-    const { password, ...appWithoutPassword } = appData;
+    
+    const responseData = {
+      name: appData.name,
+      version: appData.version,
+      htmlContent: appData.htmlContent,
+    };
 
-    return NextResponse.json(appWithoutPassword);
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error(`Error fetching application ${params.appId}:`, error);
