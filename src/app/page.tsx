@@ -1,21 +1,51 @@
-import { getApplications } from "@/app/actions";
+'use client';
 import { AppList } from "@/components/app/AppList";
 import { ApplicationData } from "@/lib/definitions";
 import { AddAppModal } from "@/components/app/AddAppModal";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection, query, orderBy } from "firebase/firestore";
+import { useMemoFirebase } from "@/firebase/provider";
+import { Skeleton } from "@/components/ui/skeleton";
 
-function shuffle(array: any[]) {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
+function AppSkeleton() {
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-3">
+                    <Skeleton className="h-40 w-full rounded-lg" />
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                </div>
+            ))}
+        </div>
+    );
 }
 
-export default async function Home() {
-  const result = await getApplications();
-  const apps: ApplicationData[] = result.success ? result.data || [] : [];
-  const randomApps = shuffle(apps);
+
+export default function Home() {
+  const firestore = useFirestore();
+
+  const appsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'applications'), orderBy('createdAt', 'desc'));
+  }, [firestore]);
+
+  const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);
+
+  const formattedApps = apps?.map(app => ({
+      ...app,
+      createdAt: app.createdAt?.toDate().toISOString() || new Date().toISOString(),
+      updatedAt: app.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+  })) || [];
+
+  const randomApps = useMemoFirebase(() => {
+    const newArray = [...formattedApps];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  }, [apps])
 
   return (
     <div className="space-y-8">
@@ -26,7 +56,7 @@ export default async function Home() {
         </div>
         <AddAppModal />
       </div>
-      <AppList initialApps={randomApps} />
+      {isLoading ? <AppSkeleton /> : <AppList initialApps={randomApps || []} />}
     </div>
   );
 }

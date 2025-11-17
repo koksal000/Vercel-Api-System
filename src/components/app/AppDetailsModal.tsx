@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { updateApplication } from '@/app/actions';
 import { ApplicationData } from '@/lib/definitions';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,8 @@ import {
 } from '@/components/ui/form';
 import { Eye, Edit, Key, Loader2, ArrowLeft } from 'lucide-react';
 import { HtmlPreview } from './HtmlPreview';
+import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const UpdateAppSchema = z.object({
   id: z.string(),
@@ -46,6 +47,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
   const [view, setView] = useState<View>('details');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<UpdateFormValues>({
     resolver: zodResolver(UpdateAppSchema),
@@ -58,21 +60,52 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
     },
   });
 
-  const onUpdateSubmit = (values: UpdateFormValues) => {
-    startTransition(async () => {
-      const formData = new FormData();
-      Object.entries(values).forEach(([key, value]) => formData.append(key, value));
+  useEffect(() => {
+    form.reset({
+      id: app.id,
+      name: app.name,
+      version: app.version,
+      htmlContent: app.htmlContent,
+      authPassword: '',
+    });
+  }, [app, form]);
 
-      const result = await updateApplication(formData);
-      if (result.success) {
-        toast({ title: 'Application Updated!', description: 'Your changes have been published.' });
-        form.reset({ ...values, authPassword: '' });
-        setView('details');
-        onClose(); // Close modal on success
-      } else {
-        toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
-        form.setError('authPassword', { message: result.error === 'Incorrect password.' ? 'The password you entered is incorrect.' : '' });
+
+  const onUpdateSubmit = (values: UpdateFormValues) => {
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Firestore not available' });
+        return;
+    }
+    startTransition(async () => {
+      const appRef = doc(firestore, 'applications', values.id);
+      const appSnap = await getDoc(appRef);
+
+      if (!appSnap.exists()) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Application not found.' });
+        return;
       }
+
+      const appData = appSnap.data();
+
+      if (appData.password !== values.authPassword) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Incorrect password.' });
+        form.setError('authPassword', { message: 'The password you entered is incorrect.' });
+        return;
+      }
+      
+      const { id, name, version, htmlContent } = values;
+
+      updateDocumentNonBlocking(appRef, {
+        name,
+        version,
+        htmlContent,
+        updatedAt: serverTimestamp(),
+      });
+      
+      toast({ title: 'Application Updated!', description: 'Your changes have been published.' });
+      form.reset({ ...values, authPassword: '' });
+      setView('details');
+      onClose();
     });
   };
   

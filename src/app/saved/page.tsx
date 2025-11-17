@@ -1,11 +1,12 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
-import { getApplications } from "@/app/actions";
+import { useMemo } from 'react';
 import { ApplicationData } from "@/lib/definitions";
 import { useSavedApps } from '@/hooks/use-saved-apps';
 import { AppList } from '@/components/app/AppList';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Frown } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 function AppSkeleton() {
     return (
@@ -23,27 +24,26 @@ function AppSkeleton() {
 
 
 export default function SavedPage() {
-    const [allApps, setAllApps] = useState<ApplicationData[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const { savedAppIds, isLoaded: isSavedAppsLoaded } = useSavedApps();
+    const firestore = useFirestore();
 
-    useEffect(() => {
-        async function fetchApps() {
-            setIsLoading(true);
-            const result = await getApplications();
-            if (result.success && result.data) {
-                setAllApps(result.data);
-            }
-            setIsLoading(false);
-        }
-        fetchApps();
-    }, []);
+    const appsQuery = useMemoFirebase(() => {
+        if (!firestore || !isSavedAppsLoaded || savedAppIds.length === 0) return null;
+        return query(collection(firestore, 'applications'), where('id', 'in', savedAppIds));
+    }, [firestore, isSavedAppsLoaded, savedAppIds]);
+
+    const { data: savedAppsData, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);
 
     const savedApps = useMemo(() => {
-        return allApps
-            .filter(app => savedAppIds.includes(app.id))
+        if (!savedAppsData) return [];
+        return savedAppsData
+            .map(app => ({
+                ...app,
+                createdAt: app.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                updatedAt: app.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+            }))
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [allApps, savedAppIds]);
+    }, [savedAppsData]);
     
     const showLoading = isLoading || !isSavedAppsLoaded;
 

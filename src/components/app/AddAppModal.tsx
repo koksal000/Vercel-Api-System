@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addApplication } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +28,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { generateId } from '@/lib/utils';
+import { doc, serverTimestamp } from 'firebase/firestore';
 
 const AppSchema = z.object({
   name: z.string().min(1, 'Application name is required.'),
@@ -44,6 +46,7 @@ export function AddAppModal() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const firestore = useFirestore();
 
   const form = useForm<AppFormValues>({
     resolver: zodResolver(AppSchema),
@@ -56,35 +59,33 @@ export function AddAppModal() {
   });
 
   const onSubmit = (values: AppFormValues) => {
-    startTransition(async () => {
-      const formData = new FormData();
-      Object.entries(values).forEach(([key, value]) => {
-        formData.append(key, value);
+    if (!firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Uh oh! Something went wrong.',
+        description: 'Firebase is not available.',
       });
+      return;
+    }
 
-      const result = await addApplication(formData);
+    startTransition(async () => {
+        const appId = generateId(10);
+        const appRef = doc(firestore, 'applications', appId);
+        const appData = {
+          id: appId,
+          ...values,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
 
-      if (result.success && result.data?.id) {
+        setDocumentNonBlocking(appRef, appData, {});
+        
         toast({
-          title: 'Application Published!',
-          description: 'Your new application is now live.',
+            title: 'Application Published!',
+            description: 'Your new application is now live.',
         });
-        setSubmittedId(result.data.id);
+        setSubmittedId(appData.id);
         form.reset();
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Uh oh! Something went wrong.',
-          description: result.error || 'There was a problem with your request.',
-        });
-        if (result.fieldErrors) {
-            Object.entries(result.fieldErrors).forEach(([field, errors]) => {
-                if (errors) {
-                    form.setError(field as keyof AppFormValues, { message: errors.join(', ') });
-                }
-            });
-        }
-      }
     });
   };
 

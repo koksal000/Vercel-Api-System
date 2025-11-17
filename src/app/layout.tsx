@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import {Toaster} from '@/components/ui/toaster';
 import {Header} from '@/components/app/Header';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'CapUpdate Manager',
@@ -24,9 +25,11 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased bg-background min-h-screen">
-        <Header />
-        <main className="container mx-auto px-4 py-8">{children}</main>
-        <Toaster />
+        <FirebaseClientProvider>
+          <Header />
+          <main className="container mx-auto px-4 py-8">{children}</main>
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
