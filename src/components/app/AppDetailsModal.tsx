@@ -68,7 +68,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
       htmlContent: app.htmlContent,
       authPassword: '',
     });
-  }, [app, form]);
+  }, [app]);
 
 
   const onUpdateSubmit = (values: UpdateFormValues) => {
