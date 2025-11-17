@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uygulama Listesi</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0d47a1;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        #apps-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .app-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: box-shadow 0.2s, transform 0.2s;
+            background-color: #fff;
+        }
+        .app-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+        }
+        .app-card h2 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .app-card p {
+            font-size: 0.9rem;
+            color: #606770;
+            margin: 0.25rem 0;
+        }
+        .app-card .app-id {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #8a929c;
+            word-wrap: break-word;
+        }
+        #loading, #error {
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 2rem;
+            color: #606770;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Mevcut Uygulamalar</h1>
+        <div id="loading">Yükleniyor...</div>
+        <div id="error" style="display: none;"></div>
+        <div id="apps-container"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const appsContainer = document.getElementById('apps-container');
+            const loadingIndicator = document.getElementById('loading');
+            const errorContainer = document.getElementById('error');
+
+            // API'den veri çekme fonksiyonu
+            async function fetchApplications() {
+                try {
+                    // /api/apps rotasına istek gönder
+                    const response = await fetch('/api/apps');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP hatası! Durum: ${response.status}`);
+                    }
+
+                    const apps = await response.json();
+                    
+                    loadingIndicator.style.display = 'none';
+
+                    if (apps.length === 0) {
+                        appsContainer.innerHTML = '<p>Gösterilecek uygulama bulunamadı.</p>';
+                        return;
+                    }
+
+                    // Her bir uygulama için bir kart oluştur
+                    apps.forEach(app => {
+                        const card = document.createElement('div');
+                        card.className = 'app-card';
+
+                        const name = document.createElement('h2');
+                        name.textContent = app.name;
+
+                        const version = document.createElement('p');
+                        version.textContent = `Versiyon: ${app.version}`;
+
+                        const id = document.createElement('p');
+                        id.className = 'app-id';
+                        id.textContent = `ID: ${app.id}`;
+                        
+                        const createdAt = new Date(app.createdAt);
+                        const created = document.createElement('p');
+                        created.textContent = `Oluşturulma: ${createdAt.toLocaleString('tr-TR')}`;
+
+                        card.appendChild(name);
+                        card.appendChild(version);
+                        card.appendChild(id);
+                        card.appendChild(created);
+                        
+                        appsContainer.appendChild(card);
+                    });
+
+                } catch (error) {
+                    console.error('Uygulamalar çekilirken hata oluştu:', error);
+                    loadingIndicator.style.display = 'none';
+                    errorContainer.textContent = 'Veriler yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.';
+                    errorContainer.style.display = 'block';
+                }
+            }
+
+            fetchApplications();
+        });
+    </script>
+
+</body>
+</html>
