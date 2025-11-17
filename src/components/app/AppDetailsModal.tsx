@@ -29,8 +29,9 @@ import {
 } from '@/components/ui/form';
 import { Eye, Edit, Key, Loader2, ArrowLeft } from 'lucide-react';
 import { HtmlPreview } from './HtmlPreview';
-import { useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp } from 'firebase/firestore';
+import Link from 'next/link';
 
 const UpdateAppSchema = z.object({
   id: z.string(),
@@ -41,7 +42,7 @@ const UpdateAppSchema = z.object({
 });
 type UpdateFormValues = z.infer<typeof UpdateAppSchema>;
 
-type View = 'details' | 'update' | 'preview';
+type View = 'details' | 'update';
 
 export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData; isOpen: boolean; onClose: () => void; }) {
   const [view, setView] = useState<View>('details');
@@ -61,14 +62,16 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
   });
 
   useEffect(() => {
-    form.reset({
-      id: app.id,
-      name: app.name,
-      version: app.version,
-      htmlContent: app.htmlContent,
-      authPassword: '',
-    });
-  }, [app.id, app.name, app.version, app.htmlContent]);
+    if (isOpen) {
+      form.reset({
+        id: app.id,
+        name: app.name,
+        version: app.version,
+        htmlContent: app.htmlContent,
+        authPassword: '',
+      });
+    }
+  }, [isOpen, app.id, app.name, app.version, app.htmlContent]);
 
 
   const onUpdateSubmit = (values: UpdateFormValues) => {
@@ -112,8 +115,6 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
 
   const renderContent = () => {
     switch(view) {
-      case 'preview':
-        return <HtmlPreview htmlContent={app.htmlContent} onBack={() => setView('details')} />;
       case 'update':
         return (
           <>
@@ -164,7 +165,11 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
                 </div>
             </div>
             <DialogFooter className="sm:justify-start gap-2">
-              <Button onClick={() => setView('preview')}><Eye className="mr-2 h-4 w-4" /> View Output</Button>
+              <Button asChild>
+                <Link href={`/preview/${app.id}`} target="_blank">
+                  <Eye className="mr-2 h-4 w-4" /> View Output
+                </Link>
+              </Button>
               <Button variant="outline" onClick={() => setView('update')}><Edit className="mr-2 h-4 w-4" /> Update</Button>
             </DialogFooter>
           </>
