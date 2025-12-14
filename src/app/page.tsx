@@ -30,10 +30,11 @@ export default function Home() {
   const appsQuery = useMemoFirebase(() => {
     // Wait until firebase is ready and user auth state is determined
     if (!firestore || isUserLoading) return null;
+    // Firestore requires ordering by the field used in the inequality filter first.
     return query(
         collection(firestore, 'applications'), 
         where('deleted', '!=', true),
-        orderBy('deleted'), // Required for inequality filter
+        orderBy('deleted'), 
         orderBy('createdAt', 'desc')
     );
   }, [firestore, isUserLoading]);
