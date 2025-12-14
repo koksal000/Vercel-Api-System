@@ -25,14 +25,14 @@ service cloud.firestore {
      * @path /applications/{applicationId}
      * @allow (get): Any user can read individual application data.
      * @allow (list): Signed-in users can list application data (required for queries).
-     * @allow (create, update, delete): Operations require authentication and password validation.
+     * @allow (create): Signed-in users can create applications.
+     * @allow (update): Signed-in users can update applications if they provide the correct password.
      */
     match /applications/{applicationId} {
       allow get: if true;
       allow list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && request.resource.data.password == resource.data.password;
-      // Soft delete is handled by an update operation.
     }
 
     /**

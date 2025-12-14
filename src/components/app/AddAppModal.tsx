@@ -74,6 +74,7 @@ export function AddAppModal() {
         const appData = {
           id: appId,
           ...values,
+          deleted: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };

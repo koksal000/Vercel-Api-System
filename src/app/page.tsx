@@ -30,8 +30,7 @@ export default function Home() {
     if (!firestore) return null;
     return query(
         collection(firestore, 'applications'), 
-        where('deleted', '!=', true),
-        orderBy('deleted', 'asc'),
+        where('deleted', '==', false),
         orderBy('createdAt', 'desc')
     );
   }, [firestore]);
