@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/form';
 import { Eye, Edit, Key, Loader2, ArrowLeft, Link as LinkIcon, Copy, Trash2 } from 'lucide-react';
 import { HtmlPreview } from './HtmlPreview';
-import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 
@@ -72,12 +72,6 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
 
   const updateForm = useForm<UpdateFormValues>({
     resolver: zodResolver(UpdateAppSchema),
-    defaultValues: {
-      id: app.id,
-      name: app.name,
-      version: app.version,
-      htmlContent: app.htmlContent,
-    },
   });
 
   useEffect(() => {
@@ -130,8 +124,11 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
     }
     startTransition(() => {
         const appRef = doc(firestore, 'applications', app.id);
-        deleteDocumentNonBlocking(appRef);
-        toast({ title: 'Application Deleted', description: `${app.name} has been permanently deleted.` });
+        updateDocumentNonBlocking(appRef, {
+            deleted: true,
+            updatedAt: serverTimestamp(),
+        });
+        toast({ title: 'Application Deleted', description: `${app.name} has been deleted.` });
         setDeleteAlertOpen(false);
         handleClose();
     });

@@ -3,7 +3,7 @@ import { AppList } from "@/components/app/AppList";
 import { ApplicationData } from "@/lib/definitions";
 import { AddAppModal } from "@/components/app/AddAppModal";
 import { useCollection, useFirestore } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, where } from "firebase/firestore";
 import { useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
@@ -28,7 +28,12 @@ export default function Home() {
 
   const appsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'applications'), orderBy('createdAt', 'desc'));
+    return query(
+        collection(firestore, 'applications'), 
+        where('deleted', '!=', true),
+        orderBy('deleted', 'asc'),
+        orderBy('createdAt', 'desc')
+    );
   }, [firestore]);
 
   const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);

@@ -24,7 +24,7 @@ export function HtmlPreview({ htmlContent, onBack }: { htmlContent: string; onBa
           srcDoc={htmlContent}
           title="HTML Preview"
           className="w-full h-full border-0"
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts allow-same-origin allow-downloads"
         />
       </div>
     </>

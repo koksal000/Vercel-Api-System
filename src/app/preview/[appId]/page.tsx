@@ -39,7 +39,7 @@ export default function PreviewPage({ params }: { params: { appId: string } }) {
     );
   }
   
-  if (!app) {
+  if (!app || app.deleted) {
     return (
       <div className="w-screen h-screen flex flex-col items-center justify-center text-center p-4 bg-background">
         <Frown className="w-16 h-16 text-muted-foreground" />
@@ -49,5 +49,9 @@ export default function PreviewPage({ params }: { params: { appId: string } }) {
     );
   }
 
-  return <HtmlPreview htmlContent={app.htmlContent} />;
+  return (
+      <div className="fixed inset-0 w-full h-full">
+        <HtmlPreview htmlContent={app.htmlContent} />
+      </div>
+  );
 }

@@ -8,6 +8,7 @@ export type Application = {
   password?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  deleted?: boolean;
 };
 
 export type ApplicationData = Omit<Application, 'createdAt' | 'updatedAt'> & {
