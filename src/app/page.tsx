@@ -29,13 +29,14 @@ export default function Home() {
 
   const appsQuery = useMemoFirebase(() => {
     // Wait until firebase is ready and user auth state is determined
-    if (!firestore) return null;
+    if (!firestore || isUserLoading) return null;
     return query(
         collection(firestore, 'applications'), 
-        where('deleted', '==', false),
+        where('deleted', '!=', true),
+        orderBy('deleted'), // Required for inequality filter
         orderBy('createdAt', 'desc')
     );
-  }, [firestore]);
+  }, [firestore, isUserLoading]);
 
   const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);
 
