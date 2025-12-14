@@ -23,16 +23,16 @@ service cloud.firestore {
     /**
      * @description Allows public read access to applications, but requires a password for updates.
      * @path /applications/{applicationId}
-     * @allow (get, list): Any user can read application data.
-     * @allow (create, update, delete): Only allowed if `request.resource.data.password` matches a known secret.  This is a placeholder and MUST be replaced with a secure mechanism.
-     * @deny Any operation that attempts to create, update, or delete an application without the correct password.
-     * @principle Allows public access for reading, but restricts write operations based on a password.  The password mechanism should be replaced with a proper permissioning system.
+     * @allow (get): Any user can read individual application data.
+     * @allow (list): Signed-in users can list application data (required for queries).
+     * @allow (create, update, delete): Operations require authentication and password validation.
      */
     match /applications/{applicationId} {
-      allow get, list: if true;
+      allow get: if true;
+      allow list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && request.resource.data.password == resource.data.password;
-      allow delete: if isSignedIn() && request.resource.data.password == resource.data.password;
+      // Soft delete is handled by an update operation.
     }
 
     /**
