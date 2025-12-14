@@ -5,7 +5,7 @@ import { useSavedApps } from '@/hooks/use-saved-apps';
 import { AppList } from '@/components/app/AppList';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Frown } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 function AppSkeleton() {
@@ -26,17 +26,19 @@ function AppSkeleton() {
 export default function SavedPage() {
     const { savedAppIds, isLoaded: isSavedAppsLoaded } = useSavedApps();
     const firestore = useFirestore();
+    const { isUserLoading } = useUser();
 
     const appsQuery = useMemoFirebase(() => {
-        if (!firestore || !isSavedAppsLoaded || savedAppIds.length === 0) return null;
+        if (!firestore || !isSavedAppsLoaded || isUserLoading || savedAppIds.length === 0) return null;
         return query(collection(firestore, 'applications'), where('id', 'in', savedAppIds));
-    }, [firestore, isSavedAppsLoaded, savedAppIds]);
+    }, [firestore, isSavedAppsLoaded, isUserLoading, savedAppIds]);
 
     const { data: savedAppsData, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);
 
     const savedApps = useMemo(() => {
         if (!savedAppsData) return [];
         return savedAppsData
+            .filter(app => !app.deleted) // Ensure deleted apps are not shown
             .map(app => ({
                 ...app,
                 createdAt: app.createdAt?.toDate().toISOString() || new Date().toISOString(),
@@ -45,7 +47,7 @@ export default function SavedPage() {
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [savedAppsData]);
     
-    const showLoading = isLoading || !isSavedAppsLoaded;
+    const showLoading = isLoading || !isSavedAppsLoaded || isUserLoading;
 
     return (
         <div className="space-y-8">

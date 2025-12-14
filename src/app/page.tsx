@@ -2,7 +2,7 @@
 import { AppList } from "@/components/app/AppList";
 import { ApplicationData } from "@/lib/definitions";
 import { AddAppModal } from "@/components/app/AddAppModal";
-import { useCollection, useFirestore } from "@/firebase";
+import { useCollection, useFirestore, useUser } from "@/firebase";
 import { collection, query, orderBy, where } from "firebase/firestore";
 import { useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,15 +25,17 @@ function AppSkeleton() {
 
 export default function Home() {
   const firestore = useFirestore();
+  const { isUserLoading } = useUser();
 
   const appsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Wait until firebase is ready and user auth state is determined
+    if (!firestore || isUserLoading) return null;
     return query(
         collection(firestore, 'applications'), 
         where('deleted', '==', false),
         orderBy('createdAt', 'desc')
     );
-  }, [firestore]);
+  }, [firestore, isUserLoading]);
 
   const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);
 
@@ -45,6 +47,8 @@ export default function Home() {
       updatedAt: app.updatedAt?.toDate().toISOString() || new Date().toISOString(),
     }));
   }, [apps]);
+  
+  const showLoading = isLoading || isUserLoading;
 
   return (
     <div className="space-y-8">
@@ -55,7 +59,7 @@ export default function Home() {
         </div>
         <AddAppModal />
       </div>
-      {isLoading ? <AppSkeleton /> : <AppList initialApps={formattedApps} />}
+      {showLoading ? <AppSkeleton /> : <AppList initialApps={formattedApps} />}
     </div>
   );
 }
