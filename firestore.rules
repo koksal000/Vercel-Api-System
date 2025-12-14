@@ -23,14 +23,13 @@ service cloud.firestore {
     /**
      * @description Allows public read access to applications, but requires a password for updates.
      * @path /applications/{applicationId}
-     * @allow (get): Any user can read individual application data.
-     * @allow (list): Signed-in users can list application data (required for queries).
+     * @allow (get, list): Any user can read application data.
      * @allow (create): Signed-in users can create applications.
      * @allow (update): Signed-in users can update applications if they provide the correct password.
      */
     match /applications/{applicationId} {
       allow get: if true;
-      allow list: if isSignedIn();
+      allow list: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && request.resource.data.password == resource.data.password;
     }
@@ -51,7 +50,7 @@ service cloud.firestore {
     /**
      * @description Manages saved applications for a specific user. Only the authenticated user can read/write their own saved applications.
      * @path /users/{userId}/saved_applications/{savedApplicationId}
-     * @allow (get, create, update, delete, list): Only the user with a matching `userId` can perform these operations on their saved applications.
+     * @allow (get, list, create, update, delete): Only the user with a matching `userId` can perform these operations on their saved applications.
      * @deny Any user attempting to access or modify another user's saved applications.
      * @principle Enforces strict user-ownership for saved application data.
      */
