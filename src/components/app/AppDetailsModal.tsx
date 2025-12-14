@@ -90,7 +90,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
       });
       authForm.reset();
     }
-  }, [isOpen, app, updateForm, authForm]);
+  }, [isOpen, app]);
 
 
   const onAuthSubmit = (values: AuthFormValues) => {
