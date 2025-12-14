@@ -10,7 +10,7 @@ export type Application = {
   updatedAt: Timestamp;
 };
 
-export type ApplicationData = Omit<Application, 'password' | 'createdAt' | 'updatedAt'> & {
+export type ApplicationData = Omit<Application, 'createdAt' | 'updatedAt'> & {
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
 };

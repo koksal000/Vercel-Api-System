@@ -16,6 +16,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,52 +37,69 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Eye, Edit, Key, Loader2, ArrowLeft, Link as LinkIcon, Copy } from 'lucide-react';
+import { Eye, Edit, Key, Loader2, ArrowLeft, Link as LinkIcon, Copy, Trash2 } from 'lucide-react';
 import { HtmlPreview } from './HtmlPreview';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
+
+const AuthSchema = z.object({
+  password: z.string().min(1, "Password is required."),
+});
+type AuthFormValues = z.infer<typeof AuthSchema>;
 
 const UpdateAppSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Application name is required.'),
   version: z.string().min(1, 'Version is required.'),
   htmlContent: z.string().min(1, 'HTML content is required.'),
-  authPassword: z.string().min(1, 'Password is required to update.'),
 });
 type UpdateFormValues = z.infer<typeof UpdateAppSchema>;
 
-type View = 'details' | 'update';
+type View = 'details' | 'auth' | 'update';
 
 export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData; isOpen: boolean; onClose: () => void; }) {
   const [view, setView] = useState<View>('details');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
 
-  const form = useForm<UpdateFormValues>({
+  const authForm = useForm<AuthFormValues>({
+    resolver: zodResolver(AuthSchema),
+    defaultValues: { password: '' },
+  });
+
+  const updateForm = useForm<UpdateFormValues>({
     resolver: zodResolver(UpdateAppSchema),
     defaultValues: {
       id: app.id,
       name: app.name,
       version: app.version,
       htmlContent: app.htmlContent,
-      authPassword: '',
     },
   });
 
   useEffect(() => {
     if (isOpen) {
-      form.reset({
+      updateForm.reset({
         id: app.id,
         name: app.name,
         version: app.version,
         htmlContent: app.htmlContent,
-        authPassword: '',
       });
+      authForm.reset();
     }
-  }, [isOpen, app]);
+  }, [isOpen, app, updateForm, authForm]);
 
+
+  const onAuthSubmit = (values: AuthFormValues) => {
+    if (values.password === app.password) {
+      setView('update');
+    } else {
+      authForm.setError('password', { type: 'manual', message: 'Incorrect password.' });
+    }
+  };
 
   const onUpdateSubmit = (values: UpdateFormValues) => {
     if (!firestore) {
@@ -82,20 +109,31 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
     startTransition(async () => {
       const appRef = doc(firestore, 'applications', values.id);
       
-      const { id, name, version, htmlContent, authPassword } = values;
+      const { id, name, version, htmlContent } = values;
 
       updateDocumentNonBlocking(appRef, {
         name,
         version,
         htmlContent,
-        password: authPassword,
         updatedAt: serverTimestamp(),
       });
       
       toast({ title: 'Application Updated!', description: 'Your changes have been published.' });
-      form.reset({ ...values, authPassword: '' });
-      setView('details');
-      onClose();
+      handleClose();
+    });
+  };
+
+  const onDeleteConfirm = () => {
+     if (!firestore) {
+        toast({ variant: 'destructive', title: 'Delete Failed', description: 'Firestore not available' });
+        return;
+    }
+    startTransition(() => {
+        const appRef = doc(firestore, 'applications', app.id);
+        deleteDocumentNonBlocking(appRef);
+        toast({ title: 'Application Deleted', description: `${app.name} has been permanently deleted.` });
+        setDeleteAlertOpen(false);
+        handleClose();
     });
   };
   
@@ -103,13 +141,6 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
     onClose();
     setTimeout(() => {
         setView('details');
-        form.reset({
-            id: app.id,
-            name: app.name,
-            version: app.version,
-            htmlContent: app.htmlContent,
-            authPassword: '',
-        });
     }, 300);
   }
   
@@ -121,6 +152,36 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
   const renderContent = () => {
     const apiUrl = `https://vercel-api-system.vercel.app/api/apps/${app.id}`;
     switch(view) {
+      case 'auth':
+        return (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('details')}><ArrowLeft className="h-4 w-4" /></Button>
+                <div>
+                  <DialogTitle>Authentication Required</DialogTitle>
+                  <DialogDescription>Enter the password for '{app.name}' to continue.</DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            <Form {...authForm}>
+              <form onSubmit={authForm.handleSubmit(onAuthSubmit)} className="space-y-4 py-4">
+                <FormField control={authForm.control} name="password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update Password</FormLabel>
+                    <FormControl><Input type="password" {...field} placeholder="••••••••" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <DialogFooter>
+                  <Button type="submit" disabled={authForm.formState.isSubmitting} className="bg-accent hover:bg-accent/90">
+                    {authForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Authenticate
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </>
+        );
       case 'update':
         return (
           <>
@@ -129,17 +190,19 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('details')}><ArrowLeft className="h-4 w-4" /></Button>
                 <div>
                     <DialogTitle>Update {app.name}</DialogTitle>
-                    <DialogDescription>Enter password to modify application.</DialogDescription>
+                    <DialogDescription>Modify application details below.</DialogDescription>
                 </div>
               </div>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onUpdateSubmit)} className="space-y-4 py-4">
-                <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>App Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="version" render={({ field }) => (<FormItem><FormLabel>Version</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="htmlContent" render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><Textarea {...field} className="font-code min-h-[150px]" /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="authPassword" render={({ field }) => (<FormItem><FormLabel>Confirm Password</FormLabel><FormControl><Input type="password" {...field} placeholder="••••••••" /></FormControl><FormMessage /></FormItem>)} />
-                <DialogFooter>
+            <Form {...updateForm}>
+              <form onSubmit={updateForm.handleSubmit(onUpdateSubmit)} className="space-y-4 py-4">
+                <FormField control={updateForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>App Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={updateForm.control} name="version" render={({ field }) => (<FormItem><FormLabel>Version</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={updateForm.control} name="htmlContent" render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><Textarea {...field} className="font-code min-h-[150px]" /></FormControl><FormMessage /></FormItem>)} />
+                <DialogFooter className="justify-between">
+                  <Button type="button" variant="destructive" onClick={() => setDeleteAlertOpen(true)} disabled={isPending}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </Button>
                   <Button type="submit" disabled={isPending} className="bg-accent hover:bg-accent/90">
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
                   </Button>
@@ -190,7 +253,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
                   <Eye className="mr-2 h-4 w-4" /> View Output
                 </Link>
               </Button>
-              <Button variant="outline" onClick={() => setView('update')}><Edit className="mr-2 h-4 w-4" /> Update</Button>
+              <Button variant="outline" onClick={() => setView('auth')}><Edit className="mr-2 h-4 w-4" /> Update</Button>
             </DialogFooter>
           </>
         );
@@ -198,10 +261,31 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[625px]">
         {renderContent()}
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={isDeleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    "{app.name}" application.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onDeleteConfirm} disabled={isPending} className="bg-destructive hover:bg-destructive/90">
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Continue
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

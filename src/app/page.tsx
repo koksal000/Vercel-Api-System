@@ -6,6 +6,7 @@ import { useCollection, useFirestore } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 import { useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo } from "react";
 
 function AppSkeleton() {
     return (
@@ -32,20 +33,14 @@ export default function Home() {
 
   const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);
 
-  const formattedApps = apps?.map(app => ({
+  const formattedApps = useMemo(() => {
+    if (!apps) return [];
+    return apps.map(app => ({
       ...app,
       createdAt: app.createdAt?.toDate().toISOString() || new Date().toISOString(),
       updatedAt: app.updatedAt?.toDate().toISOString() || new Date().toISOString(),
-  })) || [];
-
-  const randomApps = useMemoFirebase(() => {
-    const newArray = [...formattedApps];
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
-  }, [apps])
+    }));
+  }, [apps]);
 
   return (
     <div className="space-y-8">
@@ -56,7 +51,7 @@ export default function Home() {
         </div>
         <AddAppModal />
       </div>
-      {isLoading ? <AppSkeleton /> : <AppList initialApps={randomApps || []} />}
+      {isLoading ? <AppSkeleton /> : <AppList initialApps={formattedApps} />}
     </div>
   );
 }
