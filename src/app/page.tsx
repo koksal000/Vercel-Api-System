@@ -3,7 +3,7 @@ import { AppList } from "@/components/app/AppList";
 import { ApplicationData } from "@/lib/definitions";
 import { AddAppModal } from "@/components/app/AddAppModal";
 import { useCollection, useFirestore, useUser } from "@/firebase";
-import { collection, query, orderBy, where } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 import { useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
@@ -30,24 +30,25 @@ export default function Home() {
   const appsQuery = useMemoFirebase(() => {
     // Wait until firebase is ready and user auth state is determined
     if (!firestore || isUserLoading) return null;
-    // Firestore requires ordering by the field used in the inequality filter first.
+    // Get all applications, sorted by creation date. We will filter 'deleted' ones on the client.
     return query(
         collection(firestore, 'applications'), 
-        where('deleted', '!=', true),
-        orderBy('deleted'), 
         orderBy('createdAt', 'desc')
     );
   }, [firestore, isUserLoading]);
 
-  const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any}>(appsQuery);
+  const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any, deleted?: boolean}>(appsQuery);
 
   const formattedApps = useMemo(() => {
     if (!apps) return [];
-    return apps.map(app => ({
-      ...app,
-      createdAt: app.createdAt?.toDate().toISOString() || new Date().toISOString(),
-      updatedAt: app.updatedAt?.toDate().toISOString() || new Date().toISOString(),
-    }));
+    // Filter out deleted apps on the client and format the data
+    return apps
+      .filter(app => app.deleted !== true)
+      .map(app => ({
+        ...app,
+        createdAt: app.createdAt?.toDate().toISOString() || new Date().toISOString(),
+        updatedAt: app.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+      }));
   }, [apps]);
   
   const showLoading = isLoading || isUserLoading;
