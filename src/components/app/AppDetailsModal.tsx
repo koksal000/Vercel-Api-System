@@ -73,20 +73,18 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
 
   const updateForm = useForm<UpdateFormValues>({
     resolver: zodResolver(UpdateAppSchema),
-    defaultValues: {
-      id: app.id,
-      name: app.name,
-      version: app.version,
-      description: app.description,
-      htmlContent: app.htmlContent,
-    }
+    // Default values are now set in useEffect to ensure they are fresh when the modal opens
   });
 
   useEffect(() => {
     if (isOpen) {
-      // Reset forms and view when modal opens
+      // Reset the view to details whenever the modal is opened
       setView('details');
-      authForm.reset();
+      
+      // Reset the password form
+      authForm.reset({ password: '' });
+      
+      // Reset the update form with the current app's data
       updateForm.reset({
         id: app.id,
         name: app.name,
@@ -95,7 +93,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
         htmlContent: app.htmlContent,
       });
     }
-  }, [isOpen, app]);
+  }, [isOpen, app, authForm, updateForm]);
 
 
   const onAuthSubmit = (values: AuthFormValues) => {
