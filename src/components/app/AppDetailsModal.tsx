@@ -73,18 +73,12 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
 
   const updateForm = useForm<UpdateFormValues>({
     resolver: zodResolver(UpdateAppSchema),
-    // Default values are now set in useEffect to ensure they are fresh when the modal opens
   });
 
   useEffect(() => {
     if (isOpen) {
-      // Reset the view to details whenever the modal is opened
       setView('details');
-      
-      // Reset the password form
       authForm.reset({ password: '' });
-      
-      // Reset the update form with the current app's data
       updateForm.reset({
         id: app.id,
         name: app.name,
@@ -143,7 +137,6 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
   
   const handleClose = () => {
     onClose();
-    // Delay view reset to allow for closing animation
     setTimeout(() => {
         setView('details');
     }, 300);
@@ -283,8 +276,8 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the
-                    "{app.name}" application.
+                    This action cannot be undone. This will mark the application as deleted
+                    and it will no longer appear in the lists.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
