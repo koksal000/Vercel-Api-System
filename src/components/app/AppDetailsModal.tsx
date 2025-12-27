@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect, FC } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/form';
 import { Eye, Edit, Key, Loader2, ArrowLeft, Link as LinkIcon, Copy, Trash2 } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import Link from 'next/link';
 
 const AuthSchema = z.object({
@@ -177,6 +177,15 @@ const UpdateView: FC<{ app: ApplicationData; onBack: () => void; onClose: () => 
         },
     });
 
+    useEffect(() => {
+        updateForm.reset({
+            name: app.name,
+            version: app.version,
+            description: app.description || '',
+            htmlContent: app.htmlContent,
+        });
+    }, [app, updateForm]);
+
     const onUpdateSubmit = (values: UpdateFormValues) => {
         if (!firestore) {
             toast({ variant: 'destructive', title: 'Update Failed', description: 'Firestore not available' });
@@ -198,13 +207,10 @@ const UpdateView: FC<{ app: ApplicationData; onBack: () => void; onClose: () => 
            toast({ variant: 'destructive', title: 'Delete Failed', description: 'Firestore not available' });
            return;
        }
-       startTransition(() => {
+       startTransition(async () => {
            const appRef = doc(firestore, 'applications', app.id);
-           updateDocumentNonBlocking(appRef, {
-               deleted: true,
-               updatedAt: serverTimestamp(),
-           });
-           toast({ title: 'Application Deleted', description: `${app.name} has been deleted.` });
+           await deleteDoc(appRef);
+           toast({ title: 'Application Deleted', description: `${app.name} has been permanently deleted.` });
            setDeleteAlertOpen(false);
            onClose();
        });
@@ -229,7 +235,7 @@ const UpdateView: FC<{ app: ApplicationData; onBack: () => void; onClose: () => 
                 <FormField control={updateForm.control} name="htmlContent" render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><Textarea {...field} className="font-code min-h-[150px]" /></FormControl><FormMessage /></FormItem>)} />
                 <DialogFooter className="justify-between pt-4">
                   <Button type="button" variant="destructive" onClick={() => setDeleteAlertOpen(true)} disabled={isPending}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
                   </Button>
                   <Button type="submit" disabled={isPending} className="bg-accent hover:bg-accent/90">
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
@@ -242,8 +248,8 @@ const UpdateView: FC<{ app: ApplicationData; onBack: () => void; onClose: () => 
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will mark the application as deleted
-                            and it will no longer appear in the lists.
+                            This action cannot be undone. This will permanently delete the application
+                             from the database.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -296,3 +302,5 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
     </Dialog>
   );
 }
+
+    

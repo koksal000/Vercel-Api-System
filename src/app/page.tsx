@@ -2,7 +2,7 @@
 import { AppList } from "@/components/app/AppList";
 import { ApplicationData } from "@/lib/definitions";
 import { AddAppModal } from "@/components/app/AddAppModal";
-import { useCollection, useFirestore, useUser } from "@/firebase";
+import { useCollection, useFirestore } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 import { useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,23 +25,19 @@ function AppSkeleton() {
 
 export default function Home() {
   const firestore = useFirestore();
-  const { isUserLoading } = useUser();
 
   const appsQuery = useMemoFirebase(() => {
-    // Wait until firebase is ready and user auth state is determined
-    if (!firestore || isUserLoading) return null;
-    // Get all applications, sorted by creation date. We will filter 'deleted' ones on the client.
+    if (!firestore) return null;
     return query(
         collection(firestore, 'applications'), 
         orderBy('createdAt', 'desc')
     );
-  }, [firestore, isUserLoading]);
+  }, [firestore]);
 
   const { data: apps, isLoading } = useCollection<Omit<ApplicationData, 'createdAt' | 'updatedAt'> & {createdAt: any, updatedAt: any, deleted?: boolean}>(appsQuery);
 
   const formattedApps = useMemo(() => {
     if (!apps) return [];
-    // Filter out deleted apps on the client and format the data
     return apps
       .filter(app => app.deleted !== true)
       .map(app => ({
@@ -51,7 +47,7 @@ export default function Home() {
       }));
   }, [apps]);
   
-  const showLoading = isLoading || isUserLoading;
+  const showLoading = isLoading;
 
   return (
     <div className="space-y-8">
@@ -66,3 +62,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
