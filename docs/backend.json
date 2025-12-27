@@ -22,6 +22,10 @@
           "type": "string",
           "description": "The HTML content of the application."
         },
+        "description": {
+          "type": "string",
+          "description": "A short description of the application."
+        },
         "password": {
           "type": "string",
           "description": "The password required to update the application. This is NOT an authentication password."
@@ -44,7 +48,8 @@
         "htmlContent",
         "password",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "description"
       ]
     },
     "SavedApplication": {
@@ -115,7 +120,7 @@
           "schema": {
             "$ref": "#/backend/entities/Application"
           },
-          "description": "Stores application data. Includes 'id', 'name', 'version', 'htmlContent', 'password', 'createdAt', and 'updatedAt'.",
+          "description": "Stores application data. Includes 'id', 'name', 'version', 'htmlContent', 'description', 'password', 'createdAt', and 'updatedAt'.",
           "params": [
             {
               "name": "applicationId",

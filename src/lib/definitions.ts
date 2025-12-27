@@ -5,6 +5,7 @@ export type Application = {
   name: string;
   version: string;
   htmlContent: string;
+  description: string;
   password?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;

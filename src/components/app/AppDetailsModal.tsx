@@ -52,6 +52,7 @@ const UpdateAppSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Application name is required.'),
   version: z.string().min(1, 'Version is required.'),
+  description: z.string().min(1, 'Description is required.'),
   htmlContent: z.string().min(1, 'HTML content is required.'),
 });
 type UpdateFormValues = z.infer<typeof UpdateAppSchema>;
@@ -72,17 +73,27 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
 
   const updateForm = useForm<UpdateFormValues>({
     resolver: zodResolver(UpdateAppSchema),
+    defaultValues: {
+      id: app.id,
+      name: app.name,
+      version: app.version,
+      description: app.description,
+      htmlContent: app.htmlContent,
+    }
   });
 
   useEffect(() => {
     if (isOpen) {
+      // Reset forms and view when modal opens
+      setView('details');
+      authForm.reset();
       updateForm.reset({
         id: app.id,
         name: app.name,
         version: app.version,
+        description: app.description || '',
         htmlContent: app.htmlContent,
       });
-      authForm.reset();
     }
   }, [isOpen, app]);
 
@@ -103,12 +114,10 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
     startTransition(async () => {
       const appRef = doc(firestore, 'applications', values.id);
       
-      const { id, name, version, htmlContent } = values;
+      const { id, ...updateData } = values;
 
       updateDocumentNonBlocking(appRef, {
-        name,
-        version,
-        htmlContent,
+        ...updateData,
         updatedAt: serverTimestamp(),
       });
       
@@ -136,6 +145,7 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
   
   const handleClose = () => {
     onClose();
+    // Delay view reset to allow for closing animation
     setTimeout(() => {
         setView('details');
     }, 300);
@@ -195,8 +205,9 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
               <form onSubmit={updateForm.handleSubmit(onUpdateSubmit)} className="space-y-4 py-4">
                 <FormField control={updateForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>App Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={updateForm.control} name="version" render={({ field }) => (<FormItem><FormLabel>Version</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={updateForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} className="min-h-[100px]" /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={updateForm.control} name="htmlContent" render={({ field }) => (<FormItem><FormLabel>HTML Content</FormLabel><FormControl><Textarea {...field} className="font-code min-h-[150px]" /></FormControl><FormMessage /></FormItem>)} />
-                <DialogFooter className="justify-between">
+                <DialogFooter className="justify-between pt-4">
                   <Button type="button" variant="destructive" onClick={() => setDeleteAlertOpen(true)} disabled={isPending}>
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                   </Button>
@@ -217,6 +228,10 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
               <DialogDescription>Version {app.version}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 text-sm">
+                <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+                    <Label className="text-right text-muted-foreground pt-2">Description</Label>
+                    <p className="pt-2 leading-relaxed">{app.description || <span className="text-muted-foreground">No description provided.</span>}</p>
+                </div>
                 <div className="grid grid-cols-[120px_1fr] items-start gap-4">
                     <Label className="text-right text-muted-foreground pt-2">App ID</Label>
                     <div className="flex items-center gap-2">

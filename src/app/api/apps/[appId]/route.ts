@@ -46,6 +46,7 @@ export async function GET(
     const responseData = {
       name: appData.name,
       version: appData.version,
+      description: appData.description,
       htmlContent: appData.htmlContent,
     };
 

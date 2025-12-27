@@ -35,6 +35,7 @@ import { doc, serverTimestamp } from 'firebase/firestore';
 const AppSchema = z.object({
   name: z.string().min(1, 'Application name is required.'),
   version: z.string().min(1, 'Version is required.'),
+  description: z.string().min(1, 'Description is required.'),
   htmlContent: z.string().min(1, 'HTML content is required.'),
   password: z.string().min(4, 'Password must be at least 4 characters long.'),
 });
@@ -53,6 +54,7 @@ export function AddAppModal() {
     defaultValues: {
       name: '',
       version: '1.0.0',
+      description: '',
       htmlContent: '',
       password: '',
     },
@@ -150,6 +152,9 @@ export function AddAppModal() {
                     <FormItem><FormLabel>Version</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
+                <FormField control={form.control} name="description" render={({ field }) => (
+                  <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} className="min-h-[100px]" /></FormControl><FormMessage /></FormItem>
+                )} />
                 <FormField control={form.control} name="htmlContent" render={({ field }) => (
                   <FormItem><FormLabel>HTML Content</FormLabel><FormControl><Textarea {...field} className="font-code min-h-[150px]" /></FormControl><FormMessage /></FormItem>
                 )} />
