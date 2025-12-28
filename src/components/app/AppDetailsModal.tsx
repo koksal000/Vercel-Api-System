@@ -26,6 +26,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,9 +43,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Eye, Edit, Key, Loader2, ArrowLeft, Link as LinkIcon, Copy, Trash2 } from 'lucide-react';
+import { Eye, Edit, Key, Loader2, ArrowLeft, Link as LinkIcon, Copy, Trash2, Info } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 
 const AuthSchema = z.object({
@@ -72,36 +78,54 @@ const DetailsView: FC<{ app: ApplicationData; onEdit: () => void }> = ({ app, on
               <DialogTitle className="font-headline text-2xl">{app.name}</DialogTitle>
               <DialogDescription>Version {app.version}</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-                <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-                    <Label className="text-right text-muted-foreground pt-2">Description</Label>
-                    <p className="pt-2 leading-relaxed">{app.description || <span className="text-muted-foreground">No description provided.</span>}</p>
+            <div className="space-y-4 py-4 text-sm">
+                
+                {app.description && (
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                      <AccordionTrigger>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Info className="h-4 w-4" />
+                          <span>Show/Hide Description</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="text-base leading-relaxed whitespace-pre-wrap">
+                        {app.description}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                )}
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                      <Label className="text-muted-foreground">App ID</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input readOnly value={app.id} className="font-code" />
+                         <Button variant="outline" size="icon" onClick={() => copyToClipboard(app.id, 'App ID')}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                  </div>
+                   <div>
+                      <Label className="text-muted-foreground">API URL</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input readOnly value={apiUrl} className="font-code" />
+                         <Button variant="outline" size="icon" onClick={() => copyToClipboard(apiUrl, 'API URL')}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-                    <Label className="text-right text-muted-foreground pt-2">App ID</Label>
-                    <div className="flex items-center gap-2">
-                      <Input readOnly value={app.id} className="font-code" />
-                       <Button variant="outline" size="icon" onClick={() => copyToClipboard(app.id, 'App ID')}>
-                          <Copy className="h-4 w-4" />
-                      </Button>
+
+                <div className="flex justify-between items-center text-xs text-muted-foreground pt-4">
+                    <div>
+                        <span className="font-semibold">Created: </span>
+                        <span>{formatDate(app.createdAt)}</span>
                     </div>
-                </div>
-                 <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-                    <Label className="text-right text-muted-foreground pt-2">API URL</Label>
-                    <div className="flex items-center gap-2">
-                      <Input readOnly value={apiUrl} className="font-code" />
-                       <Button variant="outline" size="icon" onClick={() => copyToClipboard(apiUrl, 'API URL')}>
-                          <Copy className="h-4 w-4" />
-                      </Button>
+                    <div>
+                        <span className="font-semibold">Updated: </span>
+                        <span>{formatDate(app.updatedAt)}</span>
                     </div>
-                </div>
-                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                    <Label className="text-right text-muted-foreground">Created</Label>
-                    <span>{formatDate(app.createdAt)}</span>
-                </div>
-                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                    <Label className="text-right text-muted-foreground">Last Updated</Label>
-                    <span>{formatDate(app.updatedAt)}</span>
                 </div>
             </div>
             <DialogFooter className="sm:justify-start gap-2">
@@ -170,10 +194,10 @@ const UpdateView: FC<{ app: ApplicationData; onBack: () => void; onClose: () => 
     const updateForm = useForm<UpdateFormValues>({
         resolver: zodResolver(UpdateAppSchema),
         defaultValues: {
-            name: app.name,
-            version: app.version,
+            name: app.name || '',
+            version: app.version || '',
             description: app.description || '',
-            htmlContent: app.htmlContent,
+            htmlContent: app.htmlContent || '',
         },
     });
 
@@ -203,7 +227,7 @@ const UpdateView: FC<{ app: ApplicationData; onBack: () => void; onClose: () => 
     };
 
     const onDeleteConfirm = () => {
-        if (!firestore) {
+       if (!firestore) {
            toast({ variant: 'destructive', title: 'Delete Failed', description: 'Firestore not available' });
            return;
        }
@@ -296,11 +320,11 @@ export function AppDetailsModal({ app, isOpen, onClose }: { app: ApplicationData
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[625px]">
-        {renderContent()}
+       <DialogContent className="sm:max-w-[625px] max-h-[90vh] flex flex-col">
+        <div className="overflow-y-auto pr-6 -mr-6">
+            {renderContent()}
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
